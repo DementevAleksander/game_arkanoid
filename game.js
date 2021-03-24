@@ -70,12 +70,19 @@ let game = {
         // console.log("Вызов метода update() каждый кадр!")
         this.platform.move();
         this.ball.move();
-
+        this.collideBlocks();
+        this.collidePlatform();
+    },
+    collideBlocks() {
         for (let block of this.blocks) {
-            if (this.ball.collide(block)) {
-                // console.log(this.ball.collide(block));
-                this.ball.bumpBlock(block); //меняем направление мяча
+            if (this.ball.collide(block)) { //проверка на прикосновение с объектом
+                this.ball.bumpBlock(block); //меняем направление мяча, отскок
             }
+        }
+    },
+    collidePlatform() {
+        if (this.ball.collide(this.platform)) {
+            this.ball.bumpPlatform(this.platform); //отскок мяча от платформы
         }
     },
     run() {
@@ -143,6 +150,11 @@ game.ball = {
     },
     bumpBlock(block) {
         this.dy *= -1; //меняем направление мяча на противоположное
+    },
+    bumpPlatform(platform) {
+        this.dy *= -1;
+        let touchX = this.x + this.width / 2;  //координата касания
+        this.dx = this.velocity * platform.getTouchOffset(touchX); //изменение направления мяча, в зависимости от того, на какую часть платформы он упал. возвращает значение от -1 до 1.
     }
 };
 
@@ -151,6 +163,8 @@ game.platform = {
     dx: 0, // смещение по оси x (с какой скоростью движется платформа) в данный момент
     x: 280,
     y: 300,
+    width: 100,
+    height: 14,
     ball: game.ball, //получаем объект мяча, чтобы дальше работать с ним внутри объекта платформы, чтобы мяч при взлёте не следовал за платформой.
     fire() {
         if (this.ball) {
@@ -175,6 +189,12 @@ game.platform = {
                 this.ball.x += this.dx; //изменяем координаты мяча, пока он на платформе
             }
         }
+    },
+    getTouchOffset(x) { //логика отскока мяча от платформы.
+        let diff = (this.x + this.width) - x;
+        let offset = this.width - diff;
+        let result = 2 * offset / this.width;
+        return result - 1;
     }
 };
 
