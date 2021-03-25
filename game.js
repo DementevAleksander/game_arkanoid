@@ -58,6 +58,7 @@ let game = {
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 this.blocks.push({
+                    active: true,
                     width: 60,
                     height: 20,
                     x: 64 * col + 65,
@@ -68,15 +69,16 @@ let game = {
     },
     update() {
         // console.log("Вызов метода update() каждый кадр!")
-        this.platform.move();
-        this.ball.move();
         this.collideBlocks();
         this.collidePlatform();
+        this.ball.collideWorldBounds();
+        this.platform.move();
+        this.ball.move();
     },
     collideBlocks() {
         for (let block of this.blocks) {
-            if (this.ball.collide(block)) { //проверка на прикосновение с объектом
-                this.ball.bumpBlock(block); //меняем направление мяча, отскок
+            if (block.active && this.ball.collide(block)) { //проверка на прикосновение с объектом
+                this.ball.bumpBlock(block); //меняем направление мяча, отскок, прис условии, что блок активен
             }
         }
     },
@@ -101,7 +103,9 @@ let game = {
     },
     renderBlocks() {
         for (let block of this.blocks) {
-            this.ctx.drawImage(this.sprites.block, block.x, block.y);
+            if (block.active) {
+                this.ctx.drawImage(this.sprites.block, block.x, block.y);
+            }
         }
     },
     start: function() {
@@ -148,13 +152,43 @@ game.ball = {
             } //проверяем соприкосновение мяча с блоком по координатам
         return false;
     },
+    collideWorldBounds() { //отталкиваемся от краёв экрана
+        let x = this.x + this.dx;
+        let y = this.y + this.dy;
+
+        let ballLeft = x;
+        let ballRight = ballLeft + this.width;
+        let ballTop = y;
+        let ballBottom = ballTop + this.height;
+
+        let worldLeft = 0;
+        let worldRight = game.width;
+        let worldTop = 0;
+        let worldBottom = game.height;
+
+        if (ballLeft < worldLeft) { //если координата x левой стороны мяча меньше коррдинаты x левого края экрана
+            this.x = 0;
+            this.dx = this.velocity;
+        } else if (ballRight > worldRight) {
+            this.x = worldRight - this.width;
+            this.dx = -this.velocity;
+        } else if (ballTop < worldTop) {
+            this.y = 0;
+            this.dy = this.velocity;
+        } else if (ballBottom > worldBottom) {
+            console.log('game over');
+        }
+    },
     bumpBlock(block) {
         this.dy *= -1; //меняем направление мяча на противоположное
+        block.active = false; //не отрисовываем блок (уничтожаем)
     },
     bumpPlatform(platform) {
-        this.dy *= -1;
-        let touchX = this.x + this.width / 2;  //координата касания
-        this.dx = this.velocity * platform.getTouchOffset(touchX); //изменение направления мяча, в зависимости от того, на какую часть платформы он упал. возвращает значение от -1 до 1.
+        if (this.dy > 0) { //когда мяч оттолкнулся
+            this.dy = -this.velocity; //отталкиваемся от платформы только вверх
+            let touchX = this.x + this.width / 2;  //координата касания
+            this.dx = this.velocity * platform.getTouchOffset(touchX); //изменение направления мяча, в зависимости от того, на какую часть платформы он упал. возвращает значение от -1 до 1.
+        }
     }
 };
 
